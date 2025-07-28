@@ -38,12 +38,7 @@ extern char msg[];
 std::stringstream ss;
 
 void Text::CopyScreen(u16 *src, u16 *dst) {
-	dmaCopy(BG_BMP_RAM(0), BG_BMP_RAM(2), 64*1024);
-	for(int iy = 0; iy < 196; iy++)
-		for(int ix = 0; ix < 256; ix++)
-			dst[iy * 256 + ix] = src[iy * 256 + ix];
-
-	//memcpy(src, dst, display.width * display.height * sizeof(u16));
+	memcpy(src, dst, display.width * display.height * sizeof(u16));
 }
 
 Text::Text()
@@ -105,14 +100,9 @@ Text::~Text()
 	
 	// homemade cache
 	ClearCache();
-	for(map<FT_Face, Cache*>::iterator iter = textCache.begin();
-		iter != textCache.end(); iter++) {
-		delete iter->second;
-	}
-	textCache.clear();
 	
 	// FreeType
-	for (map<u8, FT_Face>::iterator iter = faces.begin(); iter != faces.end(); iter++) {
+	for (unordered_map<u8, FT_Face>::iterator iter = faces.begin(); iter != faces.end(); iter++) {
 		FT_Done_Face(iter->second);
 	}
 	FT_Done_FreeType(library);
@@ -229,11 +219,7 @@ int Text::InitHomemadeCache(void) {
 	if (err)
 		faces[TEXT_STYLE_BOLDITALIC] = faces[TEXT_STYLE_REGULAR];
 	
-	std::map<u8, FT_Face>::iterator iter;
-	for (iter = faces.begin(); iter != faces.end(); iter++) {
-		FT_Set_Pixel_Sizes(iter->second, 0, pixelsize);
-		textCache.insert(make_pair(iter->second, new Cache()));
-	}
+	newCache.Init(faces, pixelsize);
 
 	initialized = true;
 	return 0;
@@ -297,7 +283,8 @@ int Text::CacheGlyph(u32 ucs, FT_Face face)
 	//! Does not check if this is a duplicate entry;
 	//! The caller should have checked first.
 
-	if(textCache[face]->cacheMap.size() == CACHESIZE) return -1;
+	//TODO why is this here?
+	//if(textCache[face]->cacheMap.size() == CACHESIZE) return -1;
 
 	FT_Select_Charmap(GetFace(TEXT_STYLE_REGULAR), FT_ENCODING_UNICODE);
 	FT_Load_Char(face, ucs,
@@ -316,7 +303,7 @@ int Text::CacheGlyph(u32 ucs, FT_Face face)
 	dst->bitmap_left = src->bitmap_left;
 	dst->advance = src->advance;
 	//textCache[face]->cache_ucs[textCache[face]->cachenext] = ucs;
-	textCache[face]->cacheMap.insert(make_pair(ucs, dst));
+	newCache.LoadIn(face, ucs, dst);
 	//textCache[face]->cachenext++;
 	//return textCache[face]->cachenext-1;
 	return ucs;
@@ -355,27 +342,26 @@ FT_GlyphSlot Text::GetGlyph(u32 ucs, int flags, u8 style)
 
 FT_GlyphSlot Text::GetGlyph(u32 ucs, int flags, FT_Face face)
 {
-	if(ftc) return NULL;
-
 #if 0
 	for(int i=0;i<textCache[face]->cachenext;i++)
 		if(textCache[face]->cache_ucs[i] == ucs)
 			return &textCache[face]->glyphs[i];
 #endif	
-
-	map<u16,FT_GlyphSlot>::iterator iter = textCache[face]->cacheMap.find(ucs);
 	
-	if (iter != textCache[face]->cacheMap.end()) {
-		stats_hits++;
-		hit = true;
-		return iter->second;
+	
+	FT_GlyphSlot out;
+	if(newCache.LoadOut(face, ucs, &out)) {
+		return out;
 	}
 	
 	stats_misses++;
 	hit = false;
 	int i = CacheGlyph(ucs, face);
-	if (i > -1)
-		return textCache[face]->cacheMap[ucs];
+	if (i > -1){
+		//TODO while unnecassary for correctness maybe we add an extra check
+		newCache.LoadOut(face, ucs, &out);
+		return out;
+	}
 
 	FT_Load_Char(face, ucs, flags);
 	return face->glyph;
@@ -383,7 +369,7 @@ FT_GlyphSlot Text::GetGlyph(u32 ucs, int flags, FT_Face face)
 
 void Text::ClearCache()
 {
-	 for (map<u8, FT_Face>::iterator iter = faces.begin(); iter != faces.end(); iter++) {
+	 for (unordered_map<u8, FT_Face>::iterator iter = faces.begin(); iter != faces.end(); iter++) {
 		 ClearCache(iter->second);
 	 }
 }
@@ -395,13 +381,7 @@ void Text::ClearCache(u8 style)
 
 void Text::ClearCache(FT_Face face)
 {
-	//textCache[face]->cachenext = 0;
-	map<u16, FT_GlyphSlot>::iterator iter;   
-	for(iter = textCache[face]->cacheMap.begin(); iter != textCache[face]->cacheMap.end(); iter++) {
-		delete iter->second;
-	}
-
-	textCache[face]->cacheMap.clear();
+	newCache.ClearFace(face);
 }
 
 void Text::ClearScreen()
@@ -546,7 +526,7 @@ void Text::SetPixelSize(u8 size)
 		return;
 	}
 
-	for (map<u8, FT_Face>::iterator iter = faces.begin(); iter != faces.end(); iter++) {
+	for (unordered_map<u8, FT_Face>::iterator iter = faces.begin(); iter != faces.end(); iter++) {
 		if (!size)
 			FT_Set_Pixel_Sizes(iter->second, 0, PIXELSIZE);
 		else
@@ -916,7 +896,7 @@ FT_Face Text::GetFace(u8 style)
 {
 	return face;
 
-	map<u8, FT_Face>::iterator iter = faces.find(style);
+	unordered_map<u8, FT_Face>::iterator iter = faces.find(style);
 	if (iter != faces.end())
 		return iter->second;
 	else
