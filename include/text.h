@@ -59,6 +59,82 @@ typedef struct TextCache_ {
 
 class Text {
 
+	public:
+
+	App *app;
+	int pixelsize;
+	//! Not used ... really.
+	struct { u8 r; u8 g; u8 b; } bgcolor;
+	bool usebgcolor;
+	//! Pointers to screens and which one is current.
+	u16 *screen, *screenleft, *screenright;
+	int bg_main;
+	struct {
+		int left, right, top, bottom;
+	} margin;
+	struct {
+		int width, height;
+	} display;
+	int linespacing;
+	bool linebegan, bold, italic;
+
+	Text();
+	Text(class App *parent) { app = parent; }
+	~Text();
+	int  Init();
+	void InitPen(void);
+	void Begin();
+	void End();
+	
+	u8   GetAdvance(u32 ucs);
+	u8   GetAdvance(u32 ucs, u8 style);
+	u8   GetCharCode(const char* txt, u32* code);
+	u8   GetCharCountInsideWidth(const char *txt, u8 style, u8 pixels);
+	FT_Face GetFace() { return face; }
+	FT_Face GetFace(u8 style) { return faces[style]; }
+	std::string GetFontFile(u8 style);
+	std::string GetFontName(u8 style);
+	bool GetFontName(std::string &s);
+	u8   GetHeight(void);
+	bool GetInvert();
+	void GetPen(u16 *x, u16 *y);
+	void GetPen(u16 &x, u16 &y);
+	u8   GetPenX();
+	u8   GetPenY();
+	u8   GetPixelSize();
+	u16* GetScreen();
+	int  GetStringAdvance(const char *txt);
+	u8   GetStringWidth(const char *txt, u8 style);
+	inline int GetStyle() { return style; }
+
+	void FreezeMain();
+	void ShowMain();
+	void InitScreens();
+	void SetInvert(bool invert);
+	void SetPen(u16 x, u16 y);
+	void SetPixelSize(u8 size);
+	bool SetFace(u8 style);
+	void SetFontFile(const char *path, u8 style);
+	void SetScreen(u16 *s);
+	inline void SetStyle(int astyle) { style = astyle; face = faces[style]; }
+	
+	void ClearCache();
+	void ClearCache(u8 style);
+	void ClearRect(u16 xl, u16 yl, u16 xh, u16 yh);
+	void ClearScreen();
+	void ClearScreen(u16*, u8, u8, u8);
+	void CopyScreen(u16 *src, u16 *dst);
+	void SwapScreens();
+
+	void PrintChar(u32 ucs);
+	void PrintChar(u32 ucs, u8 style);
+	bool PrintNewLine(void);
+	void PrintStats();
+	void PrintStatusMessage(const char *msg);
+	void PrintString(const char *string);
+	void PrintString(const char *string, u8 style);
+	void PrintSplash(u16 *screen);
+
 	private:
 
 	FT_Library library;
@@ -121,89 +197,6 @@ class Text {
 	void PrintChar(u32 ucs, FT_Face face);
 	void PrintString(const char *string, FT_Face face);
 	void ReportFace(FT_Face face);
-
-	public:
-
-	App *app;
-	int pixelsize;
-	//! Not used ... really.
-	struct { u8 r; u8 g; u8 b; } bgcolor;
-	bool usebgcolor;
-	//! Pointers to screens and which one is current.
-	u16 *screen, *screenleft, *screenright;
-	int bg_main;
-	struct {
-		int left, right, top, bottom;
-	} margin;
-	struct {
-		int width, height;
-	} display;
-	int linespacing;
-	bool linebegan, bold, italic;
-
-	// Keep stats to check efficiency of caching.
-
-	//! Total glyph cache hits.
-	int stats_hits;
-	//! Total glyph cache misses.
-	int stats_misses;
-
-	Text();
-	Text(class App *parent) { app = parent; }
-	~Text();
-	int  Init();
-	void InitPen(void);
-	void Begin();
-	void End();
-	
-	u8   GetAdvance(u32 ucs);
-	u8   GetAdvance(u32 ucs, u8 style);
-	u8   GetCharCode(const char* txt, u32* code);
-	u8   GetCharCountInsideWidth(const char *txt, u8 style, u8 pixels);
-	FT_Face GetFace() { return face; }
-	FT_Face GetFace(u8 style) { return faces[style]; }
-	std::string GetFontFile(u8 style);
-	std::string GetFontName(u8 style);
-	bool GetFontName(std::string &s);
-	u8   GetHeight(void);
-	bool GetInvert();
-	void GetPen(u16 *x, u16 *y);
-	void GetPen(u16 &x, u16 &y);
-	u8   GetPenX();
-	u8   GetPenY();
-	u8   GetPixelSize();
-	u16* GetScreen();
-	int  GetStringAdvance(const char *txt);
-	u8   GetStringWidth(const char *txt, u8 style);
-	inline int GetStyle() { return style; }
-
-	void FreezeMain();
-	void ShowMain();
-	void InitScreens();
-	void SetInvert(bool invert);
-	void SetPen(u16 x, u16 y);
-	void SetPixelSize(u8 size);
-	bool SetFace(u8 style);
-	void SetFontFile(const char *filename, u8 style);
-	void SetScreen(u16 *s);
-	inline void SetStyle(int astyle) { style = astyle; face = faces[style]; }
-	
-	void ClearCache();
-	void ClearCache(u8 style);
-	void ClearRect(u16 xl, u16 yl, u16 xh, u16 yh);
-	void ClearScreen();
-	void ClearScreen(u16*, u8, u8, u8);
-	void CopyScreen(u16 *src, u16 *dst);
-	void SwapScreens();
-
-	void PrintChar(u32 ucs);
-	void PrintChar(u32 ucs, u8 style);
-	bool PrintNewLine(void);
-	void PrintStats();
-	void PrintStatusMessage(const char *msg);
-	void PrintString(const char *string);
-	void PrintString(const char *string, u8 style);
-	void PrintSplash(u16 *screen);
 };
 
 #endif

@@ -29,7 +29,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #include "string.h"
 
 #include "app.h"
-#include "ft.h"
+// #include "ft.h"
 #include "main.h"
 #include "version.h"
 #include "text.h"
@@ -86,8 +86,8 @@ Text::Text()
 	screen = screenleft;
 
 	// Statistics.
-	stats_hits = 0;
-	stats_misses = 0;
+	//stats_hits = 0;
+	//stats_misses = 0;
 
 	//ClearScreen(offscreen, 255, 255, 255);
 	ss.clear();
@@ -100,9 +100,9 @@ Text::~Text()
 	
 	// homemade cache
 	ClearCache();
-	
+
 	// FreeType
-	for (unordered_map<u8, FT_Face>::iterator iter = faces.begin(); iter != faces.end(); iter++) {
+	for (std::unordered_map<u8, FT_Face>::iterator iter = faces.begin(); iter != faces.end(); iter++) {
 		FT_Done_Face(iter->second);
 	}
 	FT_Done_FreeType(library);
@@ -173,27 +173,26 @@ FT_Error Text::InitFreeTypeCache(void) {
 	error = FTC_CMapCache_New(cache.manager,&cache.cmap);
 	if(error) return error;
 
-	sprintf(face_id.file_path, "%s/%s", FONTDIR, filenames[TEXT_STYLE_REGULAR].c_str());
+	sprintf(face_id.file_path, "%s/%s", app->fontdir.c_str(), filenames[TEXT_STYLE_REGULAR].c_str());
 	face_id.face_index = 0;
 	sprintf(msg, "%s %s %d\n", filenames[TEXT_STYLE_REGULAR].c_str(), face_id.file_path, face_id.face_index);
 	app->Log(msg);
 	error =	FTC_Manager_LookupFace(cache.manager, (FTC_FaceID)&face_id, &faces[TEXT_STYLE_REGULAR]);
 	if(error) return error;
 
-	ReportFace(faces[TEXT_STYLE_REGULAR]);
+	// ReportFace(faces[TEXT_STYLE_REGULAR]);
 
-	screen = screenleft;
-	InitPen();
 	initialized = true;
 	return 0;
 }
 
 FT_Error Text::CreateFace(int style) {
-	std::string path = std::string(FONTDIR) + "/" + filenames[style];
-	FT_Error err = FT_New_Face(library, path.c_str(), 0, &face);
-	if (!err)
-		faces[style] = face;
-	return err;
+	// TODO check for leakage
+	std::string path = app->fontdir + "/" + filenames[style];
+	error = FT_New_Face(library, path.c_str(), 0, &face);
+	if (error) app->PrintStatus(path.c_str());
+	else faces[style] = face;
+	return error;
 }
 
 int Text::InitHomemadeCache(void) {
@@ -259,8 +258,8 @@ void Text::Begin()
 	bold = false;
 	italic = false;
 	linebegan = false;
-	stats_hits = 0;
-	stats_misses = 0;
+	//stats_hits = 0;
+	//stats_misses = 0;
 	hit = false;
 }
 
@@ -342,19 +341,12 @@ FT_GlyphSlot Text::GetGlyph(u32 ucs, int flags, u8 style)
 
 FT_GlyphSlot Text::GetGlyph(u32 ucs, int flags, FT_Face face)
 {
-#if 0
-	for(int i=0;i<textCache[face]->cachenext;i++)
-		if(textCache[face]->cache_ucs[i] == ucs)
-			return &textCache[face]->glyphs[i];
-#endif	
-	
-	
 	FT_GlyphSlot out;
 	if(newCache.LoadOut(face, ucs, &out)) {
 		return out;
 	}
 	
-	stats_misses++;
+	//stats_misses++;
 	hit = false;
 	int i = CacheGlyph(ucs, face);
 	if (i > -1){
@@ -818,11 +810,13 @@ void Text::PrintString(const char *s, FT_Face face) {
 }
 
 void Text::PrintStats() {
+	/*
 	//! Tell log how well we're caching.
 	sprintf(msg, "info: %d cache hits.\n", stats_hits);
 	app->Log(msg);
 	sprintf(msg, "info: %d cache misses.\n", stats_misses);
 	app->Log(msg);
+	*/
 }
 
 void Text::PrintStatusMessage(const char *msg)
@@ -848,7 +842,7 @@ void Text::PrintStatusMessage(const char *msg)
 
 void Text::ClearScreen(u16 *screen, u8 r, u8 g, u8 b)
 {
-	for (int i=0;i<PAGE_HEIGHT*PAGE_HEIGHT;i++)
+	for (int i=0;i<display.height*display.height;i++)
 		screen[i] = RGB15(r,g,b) | BIT(15);
 }
 
@@ -865,18 +859,16 @@ void Text::PrintSplash(u16 *screen)
 	SetPixelSize(size);
 	SetInvert(invert);
 	SetScreen(s);
-	
-	swiWaitForVBlank();
 }
 
-void Text::SetFontFile(const char *filename, u8 style)
+void Text::SetFontFile(const char *path, u8 style)
 {
-	if(!strcmp(filenames[style].c_str(),filename)) return;
-	filenames[style] = filename;
-	if(initialized) ClearCache(style);
+	if (!strcmp(filenames[style].c_str(), path)) return;
+	filenames[style] = std::string(path);
+	CreateFace(style);
 }
 
-string Text::GetFontFile(u8 style)
+std::string Text::GetFontFile(u8 style)
 {
 	return filenames[style];
 }
@@ -887,48 +879,3 @@ bool Text::SetFace(u8 astyle)
 	face = faces[style];
 	return true;
 }
-
-/*
-FT_Face Text::GetFace(u8 style)
-{
-	return face;
-
-	unordered_map<u8, FT_Face>::iterator iter = faces.find(style);
-	if (iter != faces.end())
-		return iter->second;
-	else
-		return faces[TEXT_STYLE_REGULAR];
-}
-*/
-
-int asciiart() {
-  auto ft = typesetter();
-  auto error = renderer(ft.face);
-  free_ft(ft);
-  return error;
-}
-
-const char* ErrorString(u8 c) {
-	switch (c) {
-		case 0:
-		return "ok";
-		break;
-		default:
-		return "unknown error";
-	}
-}
-
-//    "no error",
-//     "cannot open resource" ,
-//     "unknown file format" ,
-//     "broken file" ,
-//     "invalid FreeType version" 
-//     "module version is too low", 
-//     "invalid argument" 
-//     "unimplemented feature" 
-//     "broken table" 
-//     "broken offset within table" 
-//     "array allocation size too large" 
-//     "missing module" 
-//     "missing property" 
-// ]
