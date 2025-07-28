@@ -5,17 +5,13 @@
 #include FT_FREETYPE_H
 #include FT_CACHE_H
 #include <unordered_map>
+#include <map>
 #include <nds.h>
-
-class Cache {
-public:
-	std::unordered_map<u16, FT_GlyphSlot> cacheMap;
-};
-
 
 class NewCache{
 private:
-	std::unordered_map<FT_Face, Cache*> textCache;
+	std::map<std::pair<FT_Face, u16>, FT_GlyphSlot> textCache2;
+	//std::unordered_map<FT_Face, Cache*> textCache;
 public:
 	void LoadIn(FT_Face face, u32 ucs, FT_GlyphSlot glyph);
 	bool LoadOut(FT_Face face, u32 ucs, FT_GlyphSlot * glyph);

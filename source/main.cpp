@@ -40,7 +40,6 @@ int ft_main(int argc, char **argv);
 
 /*---------------------------------------------------------------------------*/
 
-
 int kungheyfatcheck(void) {
 	iprintf("** kungheyfatcheck **\n");
 	iprintf("root directory:\n");

@@ -725,12 +725,10 @@ void Text::PrintChar(u32 ucs, FT_Face face) {
 #endif
 
 	// render to framebuffer.
-
 #ifdef DEBUG_PEN_POSITION
 	// DEBUG Mark the pen position.
 	screen[pen.y*display.height+pen.x] = RGB15(0, 0, 0) | BIT(15);
 #endif
-
 	u16 gx, gy;
 	for (gy=0; gy<height; gy++) {
 		for (gx=0; gx<width; gx++) {
@@ -761,7 +759,6 @@ void Text::PrintChar(u32 ucs, FT_Face face) {
 			}
 		}
 	}
-
 	pen.x += advance;
 	codeprev = ucs;
 
