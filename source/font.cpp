@@ -57,10 +57,12 @@ void FontMenu::handleInput()
 {
 	auto keys = keysDown();
 	
-	// WARNING d-pad keys are in pre-rotation space!
-	// TODO stop that!
 	auto key = app->key;
-	if (keys & KEY_B)
+	if (keys & KEY_SELECT)
+	{
+		app->ShowSettingsView();
+	}
+	else if (keys & KEY_B)
 	{
 		// cancel and return to settings menu
 		app->ShowSettingsView();
