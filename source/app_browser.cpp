@@ -27,7 +27,7 @@ void App::browser_handleevent()
 {
 	auto keys = keysDown();
 
-	if(keys & KEY_START)
+	if(keys & KEY_Y)
 		exit(0);
 
 	if (keys & (KEY_A | key.down))
