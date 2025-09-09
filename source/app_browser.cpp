@@ -27,15 +27,42 @@ void App::browser_handleevent()
 {
 	auto keys = keysDown();
 
-	if(keys & KEY_Y)
-		exit(0);
-
-	if (keys & (KEY_A | key.down))
+	if (keys & (KEY_A | KEY_START))
 	{
 		// Open selected book.
 		OpenBook();
 	}
 	
+	else if (keys & key.down)
+	{
+		// Select book 7 places along
+		int b = GetBookIndex(bookselected);
+		if(b != bookcount-1) {
+			b += 7;
+			if(b > bookcount-1) b = bookcount-1;
+			bookselected = books[b];
+			if (b >= browserstart + APP_BROWSER_BUTTON_COUNT) browser_nextpage();
+			bookselected = books[b];
+			browser_view_dirty = true;
+
+		}
+	}
+
+	else if (keys & key.up)
+	{
+		// Select book 7 places behind
+		int b = GetBookIndex(bookselected);
+		if(b != 0) {
+			b -= 7;
+			if(b < 0) b = 0;
+			bookselected = books[b]; 
+			if(b < browserstart) browser_prevpage();
+			bookselected = books[b];
+			browser_view_dirty = true;
+
+		}
+	}
+
 	else if (keys & (key.left | key.l))
 	{
 		// Select next book.
@@ -57,7 +84,6 @@ void App::browser_handleevent()
 		{
 			b--;
 			bookselected = books[b];
-			// TODO does not allow highlight to update
 			if(b < browserstart) browser_prevpage();
 			browser_view_dirty = true;
 		}

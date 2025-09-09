@@ -114,12 +114,6 @@ int App::Run(void)
 	if (ts->Init() != ok)
 		halt("[FAIL] typesetter\n");
 
-	// Start up screens.
-
-	InitScreens();
-	ts->SetStyle(TEXT_STYLE_BROWSER);
-	ts->PrintSplash(ts->screenleft);
-
 	// Construct library.
 
 	if (FindBooks() != ok)
@@ -135,6 +129,15 @@ int App::Run(void)
 		book->Index();
 		book->GetBookmarks()->sort();
 	}
+
+	// Set up correct orientation
+	SetOrientation(orientation);
+	
+	// Start up screens.
+
+	InitScreens();
+	ts->SetStyle(TEXT_STYLE_BROWSER);
+	ts->PrintSplash(ts->screenleft);
 
 	// Set up menus.
 
@@ -158,6 +161,9 @@ int App::Run(void)
 	while (pmMainLoop())
 	{
 		scanKeys();
+
+		if((keysHeld() & KEY_START) && (keysHeld() & KEY_SELECT))
+			exit(0);
 
 		if(mode == APP_MODE_BOOK)
 			bgSetMapBase(ts->bg_main, 0);
@@ -364,10 +370,10 @@ void App::InitScreens()
 	ts->ClearScreen();
 	ts->SetScreen(ts->screenleft);
 	ts->ClearScreen();
-	SetOrientation(orientation);
 	if(!invert) {
 		lcdSwap();
 	}
+	SetOrientation(orientation);
 }
 
 void App::PrintStatus(const char *msg)
