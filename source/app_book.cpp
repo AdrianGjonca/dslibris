@@ -187,6 +187,7 @@ u8 App::OpenBook(void)
 	if(!bookselected) return 254;
 
 	PrintStatus("opening book ...");
+	
 	if(bookcurrent) bookcurrent->Close();
 	if (int err = bookselected->Open())
 	{
@@ -201,10 +202,12 @@ u8 App::OpenBook(void)
 		mode = APP_MODE_BOOK;
 	}
 	PrintStatus("");
+	
 	if(bookcurrent->GetPosition() >= bookcurrent->GetPageCount())
 		bookcurrent->SetPosition(0);
 	bookcurrent->GetPage()->Draw(ts);
 	prefs->Write();
+	/**/
 	return 0;
 }
 

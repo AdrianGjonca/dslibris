@@ -158,8 +158,11 @@ int App::Run(void)
 	while (pmMainLoop())
 	{
 		scanKeys();
-		ts->FreezeMain();
-		ts->FreezeMain();
+		if(mode == APP_MODE_BOOK)
+			bgSetMapBase(ts->bg_main, 0);
+		else
+			bgSetMapBase(ts->bg_main, 8);
+
 		switch (mode) {
 			case APP_MODE_BOOK:
 			HandleEventInBook();
@@ -188,8 +191,7 @@ int App::Run(void)
 			if (fontmenu->isDirty()) fontmenu->draw();
 			break;
 		}
-		ts->ShowMain();
-		ts->ShowMain();
+		ts->UpdateMain();
 	}
 	return 0;
 }

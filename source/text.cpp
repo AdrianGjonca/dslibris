@@ -112,30 +112,8 @@ Text::~Text()
 	FT_Done_FreeType(library);
 }
 
-void Text::FreezeMain() {
-	if(bgGetMapBase(bg_main) == 8)
-	{
-		dmaCopyAsynch(screenright, screenright + 256*256, 256*511+128);
-	}
-	else
-	{
-		dmaCopyAsynch(screenright + 256*256, screenright, 256*511+128);
-	}
-
+void Text::UpdateMain() {
 	dmaCopyAsynch(screenright, screenright + 256*256, 256*511+128);
-	//dmaCopy((void*)0x06000000, (void*)0x06020000, (u32)0x00020000);
-	//dmaCopy(BG_BMP_RAM(0), BG_BMP_RAM(4), 128 * 1024);
-}
-
-void Text::ShowMain() {
-	if(bgGetMapBase(bg_main) == 8)
-	{
-		bgSetMapBase(bg_main, 0);
-	}
-	else
-	{
-		bgSetMapBase(bg_main, 8);
-	}
 }
 
 static FT_Error

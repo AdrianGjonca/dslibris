@@ -30,7 +30,7 @@
 #define CACHESIZE 512
 
 #define SCREENRIGHT BG_BMP_RAM(0)
-#define OFFSCREEN BG_BMP_RAM(8)
+#define SCREENRIGHT2 BG_BMP_RAM(8)
 #define SCREENLEFT BG_BMP_RAM_SUB(0)
 
 class App;
@@ -102,8 +102,7 @@ class Text {
 	Text(class App *parent) { app = parent; }
 	~Text();
 	
-	void FreezeMain();
-	void ShowMain();
+	void UpdateMain();
 
 	int  Init();
 	void InitPen(void);
