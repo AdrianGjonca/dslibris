@@ -198,6 +198,7 @@ int App::Run(void)
 			if (fontmenu->isDirty()) fontmenu->draw();
 			break;
 		}
+		swiWaitForVBlank();
 		ts->UpdateMain();
 	}
 	return 0;
