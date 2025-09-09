@@ -26,7 +26,10 @@
 void App::browser_handleevent()
 {
 	auto keys = keysDown();
-	
+
+	if(keys & KEY_START)
+		exit(0);
+
 	if (keys & (KEY_A | key.down))
 	{
 		// Open selected book.

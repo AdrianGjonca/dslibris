@@ -158,6 +158,7 @@ int App::Run(void)
 	while (pmMainLoop())
 	{
 		scanKeys();
+
 		if(mode == APP_MODE_BOOK)
 			bgSetMapBase(ts->bg_main, 0);
 		else
