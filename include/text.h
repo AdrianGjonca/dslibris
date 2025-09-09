@@ -29,6 +29,10 @@
 
 #define CACHESIZE 512
 
+#define SCREENRIGHT BG_BMP_RAM(0)
+#define OFFSCREEN BG_BMP_RAM(8)
+#define SCREENLEFT BG_BMP_RAM_SUB(0)
+
 class App;
 int asciiart();
 const char* ErrorString(u8);
@@ -81,6 +85,8 @@ class Text {
 	bool usebgcolor;
 	//! Pointers to screens and which one is current.
 	u16 *screen, *screenleft, *screenright;
+	int bg_main;
+
 	//! Offscreen buffer. Only used when OFFSCREEN defined.
 	u16 *offscreen;
 	struct {
@@ -95,6 +101,10 @@ class Text {
 	Text();
 	Text(class App *parent) { app = parent; }
 	~Text();
+	
+	void FreezeMain();
+	void ShowMain();
+
 	int  Init();
 	void InitPen(void);
 	void Begin();

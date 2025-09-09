@@ -152,12 +152,14 @@ int App::Run(void)
 		OpenBook();
 	}
 
+
+	bgSetMapBase(ts->bg_main, 8);
 	keysSetRepeat(60,2);
 	while (pmMainLoop())
 	{
-		swiWaitForVBlank();
 		scanKeys();
-
+		ts->FreezeMain();
+		ts->FreezeMain();
 		switch (mode) {
 			case APP_MODE_BOOK:
 			HandleEventInBook();
@@ -186,6 +188,8 @@ int App::Run(void)
 			if (fontmenu->isDirty()) fontmenu->draw();
 			break;
 		}
+		ts->ShowMain();
+		ts->ShowMain();
 	}
 	return 0;
 }
@@ -304,8 +308,8 @@ void App::SetOrientation(bool turned_right)
 		REG_BG3Y = 0 << 8;
 		REG_BG3X_SUB = 191 << 8;
 		REG_BG3Y_SUB = 0 << 8;
-		ts->screenright = (u16*)BG_BMP_RAM_SUB(0);
-		ts->screenleft = (u16*)BG_BMP_RAM(0);
+		ts->screenleft = (u16*)SCREENLEFT;
+		ts->screenright = (u16*)SCREENRIGHT;
 		orientation = true;
 		// TODO put this in user coords
 		key.down = KEY_UP;
@@ -323,8 +327,8 @@ void App::SetOrientation(bool turned_right)
 		REG_BG3Y = 255 << 8;
 		REG_BG3X_SUB = 0 << 8;
 		REG_BG3Y_SUB = 255 << 8;
-		ts->screenright = (u16*)BG_BMP_RAM_SUB(0);
-		ts->screenleft = (u16*)BG_BMP_RAM(0);
+		ts->screenleft = (u16*)SCREENLEFT;
+		ts->screenright = (u16*)SCREENRIGHT;
 		orientation = false;
 		// TODO put this in user coords
 		key.down = KEY_DOWN;
@@ -347,17 +351,18 @@ void App::SetOrientation(bool turned_right)
 void App::InitScreens()
 {
 	videoSetMode(MODE_5_2D);
-	vramSetBankA(VRAM_A_MAIN_BG);
-	bgInit(3, BgType_Bmp16, BgSize_B16_256x256, 0,0);
+	vramSetBankA(VRAM_A_MAIN_BG_0x06000000);
+	vramSetBankB(VRAM_B_MAIN_BG_0x06020000);
+	ts->bg_main = bgInit(3, BgType_Bmp16, BgSize_B16_256x256, 0,0);
 	videoSetModeSub(MODE_5_2D);
-	vramSetBankC(VRAM_C_SUB_BG);
+	vramSetBankC(VRAM_C_SUB_BG_0x06200000);
 	bgInitSub(3, BgType_Bmp16, BgSize_B16_256x256, 0,0);
 	ts->SetScreen(ts->screenright);
 	ts->ClearScreen();
 	ts->SetScreen(ts->screenleft);
 	ts->ClearScreen();
 	SetOrientation(orientation);
-	if(invert) {
+	if(!invert) {
 		lcdSwap();
 	}
 }

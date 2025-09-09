@@ -49,6 +49,7 @@ void App::PrefsInit()
 
 void App::PrefsDraw()
 {
+	
 	// save state
 	bool invert = ts->GetInvert();
 	u16* screen = ts->GetScreen();

@@ -53,9 +53,9 @@ Text::Text()
 	filenames[TEXT_STYLE_BOLDITALIC] = FONTBOLDITALICFILE;
 	filenames[TEXT_STYLE_BROWSER] = FONTBROWSERFILE;
 
-	screenleft = (u16*)BG_BMP_RAM_SUB(0);
-	screenright = (u16*)BG_BMP_RAM(0);
-	offscreen = new u16[display.width * display.height];
+	screenleft = (u16*)SCREENLEFT;
+	screenright = (u16*)SCREENRIGHT;
+	//offscreen = new u16[display.width * display.height];
 	margin.left = MARGINLEFT;
 	margin.right = MARGINRIGHT;
 	margin.top = MARGINTOP;
@@ -88,14 +88,14 @@ Text::Text()
 	stats_hits = 0;
 	stats_misses = 0;
 
-	ClearScreen(offscreen, 255, 255, 255);
+	//ClearScreen(offscreen, 255, 255, 255);
 	ss.clear();
 }
 
 Text::~Text()
 {
 	// framebuffers
-	free(offscreen);
+	//free(offscreen);
 	
 	// homemade cache
 	ClearCache();
@@ -110,6 +110,32 @@ Text::~Text()
 		FT_Done_Face(iter->second);
 	}
 	FT_Done_FreeType(library);
+}
+
+void Text::FreezeMain() {
+	if(bgGetMapBase(bg_main) == 8)
+	{
+		dmaCopyAsynch(screenright, screenright + 256*256, 256*511+128);
+	}
+	else
+	{
+		dmaCopyAsynch(screenright + 256*256, screenright, 256*511+128);
+	}
+
+	dmaCopyAsynch(screenright, screenright + 256*256, 256*511+128);
+	//dmaCopy((void*)0x06000000, (void*)0x06020000, (u32)0x00020000);
+	//dmaCopy(BG_BMP_RAM(0), BG_BMP_RAM(4), 128 * 1024);
+}
+
+void Text::ShowMain() {
+	if(bgGetMapBase(bg_main) == 8)
+	{
+		bgSetMapBase(bg_main, 0);
+	}
+	else
+	{
+		bgSetMapBase(bg_main, 8);
+	}
 }
 
 static FT_Error
@@ -319,10 +345,9 @@ void Text::ClearCache(FT_Face face)
 
 void Text::ClearScreen()
 {
-	const int pixelcount = display.width*display.height;
-	if(invert) memset((void*)screen,0,pixelcount*4);
+	if(invert) memset((void*)screen,0,256*511+128);
 	else {
-		memset((void*)screen,255,pixelcount*4);
+		memset((void*)screen,255,256*511+128);
 		
 		// alternately, off-white...
 		// const u16 pixel = RGB15(29,29,29)|BIT(15);

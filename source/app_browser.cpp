@@ -164,6 +164,7 @@ void App::browser_prevpage()
 
 void App::browser_draw(void)
 {
+	//ts->FreezeMain();
 	// save state.
 	bool invert = ts->GetInvert();
  	u16 *screen = ts->GetScreen();
@@ -192,4 +193,5 @@ void App::browser_draw(void)
 	ts->SetStyle(style);
 
 	browser_view_dirty = false;
+	//ts->ShowMain();
 }
