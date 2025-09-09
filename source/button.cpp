@@ -87,21 +87,24 @@ void Button::Draw(u16 *screen, bool highlight) {
 
 	for (y=ul.y;y<lr.y;y++) {
 		int g = 100 - 100 * (y - ul.y) / (lr.y - ul.y);
+		
+		if(highlight) g = 100 - g;
+
 		int gi = (31-5) + g * 5 / 100;
 
 		for (x=ul.x+2;x<lr.x-2;x++) {
 			if(!highlight)
-				screen[y*w + x] = RGB15(gi,gi-1,gi-1)|BIT(15);
+				screen[y*w + x] = RGB15(gi,gi-2,gi-2)|BIT(15);
 			else
 
-				screen[y*w + x] = RGB15(gi,gi,gi-1)|BIT(15);
+				screen[y*w + x] = RGB15(gi-2,gi,gi-2)|BIT(15);
 		}
 	}
 
 	u16 bordercolor = RGB15(31,31,31)|BIT(15);
 	u16 bordercolor2 = RGB15(20,20,20)|BIT(15);
 	if(highlight) {
-		bordercolor2 = RGB15(10,10,10)|BIT(15);
+		bordercolor2 = RGB15(3,3,3)|BIT(15);
 	}
 	for (int x=ul.x+2;x<lr.x-2;x++) {
 		screen[ul.y*w + x] = bordercolor;
@@ -113,7 +116,7 @@ void Button::Draw(u16 *screen, bool highlight) {
 		screen[(lr.y-2)*w + x] = bordercolor;
 		screen[(lr.y-3)*w + x] = bordercolor2;
 	}
-	for (int y=ul.y+4;y<lr.y-4;y++) {
+	for (int y=ul.y+4;y<lr.y-3;y++) {
 		screen[y*w + ul.x+1] = bordercolor2;
 		screen[y*w + lr.x-2] = bordercolor2;
 	}

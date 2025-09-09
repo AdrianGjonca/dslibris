@@ -620,13 +620,40 @@ void Text::PrintChar(u32 ucs, FT_Face face) {
 		{
 			u8 a = buffer[gy*width+gx];
 			if (!a) continue;
-			if (!invert) a = 256 - a;
-			u16 pixel = RGB15(a>>3,a>>3,a>>3)|BIT(15);
+			//if (!invert) a = 256 - a;
+
+			u16 sx = (pen.x+gx+bx);
+			u16 sy = (pen.y+gy-by);
+			u16 layerBottom = screen[sy*display.height+sx];
+			int r,g,b;
+			r = 0x1F & (layerBottom >> 10);
+			g = 0x1F & (layerBottom >> 5);
+			b = 0x1F & (layerBottom);
+		
+			
+			if(invert) {
+				r+=(int)a>>3;
+				g+=(int)a>>3;
+				b+=(int)a>>3;
+			}else {
+				r-=(int)a>>3;
+				g-=(int)a>>3;
+				b-=(int)a>>3;
+			}
+			r = r<0 ? 0 : r;
+			g = g<0 ? 0 : g;
+			b = b<0 ? 0 : b;
+
+			r = r>31 ? 31 : r;
+			g = g>31 ? 31 : g;
+			b = b>31 ? 31 : b;
+
+			u16 pixel = RGB15(r,g,b) | BIT(15);
+			
 #ifdef DRAW_CACHE_MISSES
 			// if(!hit) pixel = RGB15(a>>3,0,0) | BIT(15);
 #endif
-			u16 sx = (pen.x+gx+bx);
-			u16 sy = (pen.y+gy-by);
+			
 			screen[sy*display.height+sx] = pixel;
 		}
 	}
