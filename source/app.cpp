@@ -308,7 +308,7 @@ void App::UpdateClock()
 	sprintf(tmsg, "%02d:%02d",timeStruct->tm_hour,timeStruct->tm_min );
 	u8 offset = ts->margin.left;
 	ts->ClearRect(offset, 240, offset+30, 255);
-	ts->SetPen(offset,250);
+	ts->SetPen(64*(offset),64*(250));
 	ts->PrintString(tmsg);
 
 	ts->SetScreen(screen);
@@ -396,7 +396,7 @@ void App::PrintStatus(const char *msg)
 	ts->SetInvert(false);
 
 	ts->ClearRect(0,top,ts->display.width,ts->display.height);
-	ts->SetPen(10,top+12);
+	ts->SetPen(64*(10),64*(top+12));
 	ts->PrintString(msg);
 
 	ts->SetScreen(screen);

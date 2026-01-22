@@ -51,8 +51,8 @@ namespace xml::book {
 
 void linefeed(parsedata_t *p) {
 	p->buf[p->buflen++] = '\n';
-	p->pen.x = MARGINLEFT;
-	p->pen.y += p->app->ts->GetHeight() + p->app->ts->linespacing;
+	p->pen.x = MARGINLEFT * 64;
+	p->pen.y += p->app->ts->GetHeight() + (p->app->ts->linespacing) * 64;
 	p->linebegan = false;
 }
 
@@ -181,12 +181,12 @@ void chardata(void *data, const XML_Char *txt, int txtlen)
 	if (p->buflen == 0)
 	{
 		/** starting a new page. **/
-		p->pen.x = ts->margin.left;
-		p->pen.y = ts->margin.top + lineheight;
+		p->pen.x = (ts->margin.left) * 64;
+		p->pen.y = (ts->margin.top) * 64 + lineheight;
 		p->linebegan = false;
 	}
 
-	u8 advance=0;
+	u32 advance=0;
 	int i=0, j=0;
 	while (i<txtlen)
 	{
@@ -203,7 +203,7 @@ void chardata(void *data, const XML_Char *txt, int txtlen)
 				p->buf[p->buflen++] = txt[i];
 				if(txt[i] == '\n')
 				{
-					p->pen.x = ts->margin.left;
+					p->pen.x = (ts->margin.left) * 64;
 					p->pen.y += (lineheight * linespacing);
 				}
 				else {
@@ -235,7 +235,7 @@ void chardata(void *data, const XML_Char *txt, int txtlen)
 				}
 
 				advance += ts->GetAdvance(code);
-				if(advance > ts->display.width - ts->margin.right - ts->margin.left)
+				if(advance > u32(ts->display.width - ts->margin.right - ts->margin.left) * 64)
 				{
 					// here's a line-long word, need to break it now.
 					break;
@@ -243,16 +243,16 @@ void chardata(void *data, const XML_Char *txt, int txtlen)
 			}
 		}
 
-		if ((p->pen.x + advance) > (ts->display.width - ts->margin.right))
+		if ((p->pen.x + advance) > 64 * u32(ts->display.width - ts->margin.right))
 		{
 			// we overran the margin, insert a break.
 			p->buf[p->buflen++] = '\n';
-			p->pen.x = ts->margin.left;
+			p->pen.x = (ts->margin.left) * 64;
 			p->pen.y += (lineheight * linespacing);
 			p->linebegan = false;
 		}
 
-		if (p->pen.y > (ts->display.height - ts->margin.bottom))
+		if (p->pen.y > 64 * (ts->display.height - ts->margin.bottom))
 		{
 			// reached bottom of screen.
 			if(p->screen == 1)
@@ -276,8 +276,8 @@ void chardata(void *data, const XML_Char *txt, int txtlen)
 				// move to right screen.
 				p->screen = 1;
 
-			p->pen.x = ts->margin.left;
-			p->pen.y = ts->margin.top + lineheight;
+			p->pen.x = (ts->margin.left) * 64;
+			p->pen.y = (ts->margin.top) * 64 + lineheight;
 		}
 
 		/** append this word to the page.
@@ -377,7 +377,7 @@ void end(void *data, const char *el)
 
 	parse_pop(p);
 
-	if (p->pen.y > (ts->display.height - ts->margin.bottom))
+	if (p->pen.y > 64 * (ts->display.height - ts->margin.bottom))
 	{
 		if (p->screen == 1)
 		{
@@ -393,8 +393,8 @@ void end(void *data, const char *el)
 		else
 			// End of left screen; same page, next screen.
 			p->screen = 1;
-		p->pen.x = ts->margin.left;
-		p->pen.y = ts->margin.top + ts->GetHeight();
+		p->pen.x = (ts->margin.left) * 64;
+		p->pen.y = (ts->margin.top) * 64 + ts->GetHeight();
 		p->linebegan = false;
 	}
 

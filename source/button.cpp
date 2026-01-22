@@ -122,7 +122,7 @@ void Button::Draw(u16 *screen, bool highlight, bool ui) {
 
 	
 	if (text1.length()) {
-		ts->SetPen(ul.x+6, ul.y+ts->GetHeight());
+		ts->SetPen((ul.x+6) * 64, (ul.y) * 64+ts->GetHeight());
 		u8 len = ts->GetCharCountInsideWidth(text1.c_str(),
 			text.style, lr.x-ul.x-4);
 		ts->PrintString(text1.substr(0, len).c_str(),
@@ -130,7 +130,7 @@ void Button::Draw(u16 *screen, bool highlight, bool ui) {
 	}
 
 	if (text2.length()) {
-		ts->SetPen(ul.x+6, ts->GetPenY()+ts->GetHeight());
+		ts->SetPen((ul.x+6) * 64, ts->GetPenY()+ts->GetHeight());
 		ts->PrintString(text2.c_str(), text.style);
 	}
 

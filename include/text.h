@@ -109,8 +109,8 @@ class Text {
 	void Begin();
 	void End();
 	
-	inline u8 GetAdvance(u32 ucs) { return GetAdvance(ucs, GetFace(style)); };
-	inline u8 GetAdvance(u32 ucs, u8 astyle) { return GetAdvance(ucs, GetFace(astyle)); };
+	inline u32 GetAdvance(u32 ucs) { return GetAdvance(ucs, GetFace(style)); };
+	inline u32 GetAdvance(u32 ucs, u8 astyle) { return GetAdvance(ucs, GetFace(astyle)); };
 	u8   GetCharCode(const char* txt, u32* code);
 	u8   GetCharCountInsideWidth(const char *txt, u8 style, u8 pixels);
 	FT_Face GetFace() { return faces[style]; }
@@ -118,16 +118,16 @@ class Text {
 	std::string GetFontFile(u8 style);
 	std::string GetFontName(u8 style);
 	bool GetFontName(std::string &s);
-	u8   GetHeight(void);
+	u32   GetHeight(void);
 	bool GetInvert();
 	void GetPen(u16 *x, u16 *y);
 	void GetPen(u16 &x, u16 &y);
-	u8   GetPenX();
-	u8   GetPenY();
+	u32   GetPenX();
+	u32   GetPenY();
 	u8   GetPixelSize();
 	u16* GetScreen();
 	int  GetStringAdvance(const char *txt);
-	u8   GetStringWidth(const char *txt, u8 style);
+	u32   GetStringWidth(const char *txt, u8 style);
 	inline int GetStyle() { return style; }
 
 	void SetInvert(bool invert);
@@ -206,8 +206,8 @@ class Text {
 	FT_GlyphSlot GetGlyph(u32 ucs, int flags, FT_Face face);
 	FT_Error GetGlyphBitmap(u32 ucs, FTC_SBit *asbit, FTC_Node *anode=NULL);
 	FT_UInt GetGlyphIndex(u32 ucs);
-	u8   GetAdvance(u32 ucs, FT_Face face);
-	u8   GetStringWidth(const char *txt, FT_Face face);
+	u32   GetAdvance(u32 ucs, FT_Face face);
+	u32   GetStringWidth(const char *txt, FT_Face face);
 
 	int InitCache();
 	FT_Error InitFreeTypeCache();

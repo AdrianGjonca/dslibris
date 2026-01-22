@@ -35,7 +35,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 #include "version.h"
 
 #define PIXELSIZE 12
-
+#define EXPERIMENTAL_KERNING
 extern char msg[];
 std::stringstream ss;
 
@@ -236,19 +236,25 @@ int Text::CacheGlyph(u32 ucs, FT_Face face)
 	//! The caller should have checked first.
 
 	if(textCache[face]->cacheMap.size() == CACHESIZE) return -1;
-
+#ifdef LCD_VERTICAL
 	FT_Load_Char(face, ucs,
-		FT_LOAD_RENDER|FT_LOAD_TARGET_NORMAL);
+		FT_LOAD_RENDER|FT_LOAD_TARGET_LCD);
+#else
+	FT_Load_Char(face, ucs,
+		FT_LOAD_DEFAULT|FT_LOAD_TARGET_LIGHT);
+	FT_Render_Glyph(face->glyph, FT_RENDER_MODE_LCD_V);
+#endif
 	FT_GlyphSlot src = face->glyph;
 	FT_GlyphSlot dst = new FT_GlyphSlotRec;
 	int x = src->bitmap.rows;
-	int y = src->bitmap.width;
+	int y = abs(src->bitmap.pitch);
 	dst->bitmap.buffer = new unsigned char[x*y];
 	memcpy(dst->bitmap.buffer, src->bitmap.buffer, x*y);
 	dst->bitmap.rows = src->bitmap.rows;
 	dst->bitmap.width = src->bitmap.width;
 	dst->bitmap_top = src->bitmap_top;
 	dst->bitmap_left = src->bitmap_left;
+	dst->bitmap.pitch = src->bitmap.pitch;
 	dst->advance = src->advance;
 	textCache[face]->cacheMap.insert(std::make_pair(ucs, dst));
 	return ucs;
@@ -271,7 +277,11 @@ int Text::GetGlyphBitmap(u32 ucs, FTC_SBit *sbit, FTC_Node *anode)
 	if (!ftc) return 1;
 	imagetype.face_id = (FTC_FaceID)&face_id;
 	imagetype.height = pixelsize;
+#ifdef LCD_VERTICAL
 	imagetype.flags = FT_LOAD_RENDER;
+#else
+	imagetype.flags = FT_LOAD_DEFAULT;
+#endif
 	return FTC_SBitCache_Lookup(cache.sbit,&imagetype,
 		GetGlyphIndex(ucs),sbit,anode);
 }
@@ -296,6 +306,10 @@ FT_GlyphSlot Text::GetGlyph(u32 ucs, int flags, FT_Face face)
 
 	// Cache is full, look up directly.
 	FT_Load_Char(face, ucs, flags);
+#ifdef LCD_VERTICAL
+#else
+	FT_Render_Glyph(face->glyph, FT_RENDER_MODE_LCD_V);
+#endif
 	return face->glyph;
 }
 
@@ -388,15 +402,15 @@ void Text::ClearRect(u16 xl, u16 yl, u16 xh, u16 yh)
 	}
 }
 
-u8 Text::GetStringWidth(const char *txt, u8 style)
+u32 Text::GetStringWidth(const char *txt, u8 style)
 {
 	return GetStringWidth(txt, GetFace(style));
 }
 
-u8 Text::GetStringWidth(const char *txt, FT_Face face)
+u32 Text::GetStringWidth(const char *txt, FT_Face face)
 {
 	//! Return total advance in pixels.
-	u8 width = 0;
+	u32 width = 0;
 	const char *c;
 	for(c = txt; c != NULL; c++)
 	{
@@ -404,19 +418,19 @@ u8 Text::GetStringWidth(const char *txt, FT_Face face)
 		GetCharCode(c, &ucs);
 		width += GetAdvance(ucs, face);
 	}
-	return width;
+	return (width + 32) / 64;
 }
 
 u8 Text::GetCharCountInsideWidth(const char *txt, u8 style, u8 pixels) {
 	u8 n = 0;
 	u32 ucs = 0;
-	u8 width = 0;
+	u32 width = 0;
 	for(const char *c = txt; *c != 0 && n <= strlen(txt);)
 	{
 		c += GetCharCode(c, &ucs);
 		if (ucs == 0) continue;
 		width += GetAdvance(ucs, faces[style]);
-		if (width > pixels) return n;
+		if (width > 64 * pixels) return n;
 		n++;
 	}
 	return n;
@@ -456,8 +470,8 @@ std::string Text::GetFontName(u8 style) {
 		+ std::string(faces[style]->style_name);
 }
 
-u8 Text::GetHeight() {
-	return (GetFace(style)->size->metrics.height >> 6);
+u32 Text::GetHeight() {
+	return (GetFace(style)->size->metrics.height);
 }
 
 void Text::GetPen(u16 *x, u16 *y) {
@@ -483,11 +497,11 @@ bool Text::GetInvert() {
 	return invert;
 }
 
-u8 Text::GetPenX() {
+u32 Text::GetPenX() {
 	return pen.x;
 }
 
-u8 Text::GetPenY() {
+u32 Text::GetPenY() {
 	return pen.y;
 }
 
@@ -527,7 +541,7 @@ void Text::SetScreen(u16 *inscreen)
 	screen = inscreen;
 }
 
-u8 Text::GetAdvance(u32 ucs, FT_Face face) {
+u32 Text::GetAdvance(u32 ucs, FT_Face face) {
 	//! Return glyph advance in pixels.
 
 	if (ftc)
@@ -536,7 +550,7 @@ u8 Text::GetAdvance(u32 ucs, FT_Face face) {
 
 		FTC_SBit sbit;
 		error = FTC_SBitCache_Lookup(cache.sbit, &imagetype, gindex, &sbit, NULL);
-		if (!error) return sbit->xadvance;
+		if (!error) return sbit->xadvance * 64;
 
 		FT_Glyph glyph;
 		error = FTC_ImageCache_Lookup(cache.image, &imagetype, gindex, &glyph, NULL);
@@ -548,9 +562,9 @@ u8 Text::GetAdvance(u32 ucs, FT_Face face) {
 		// Much slower, maybe less buggy.
 		auto gindex = FT_Get_Char_Index(face, ucs);
 		error = FT_Load_Glyph(face, gindex, FT_LOAD_DEFAULT);
-		if (!error) return face->glyph->advance.x >> 6;
+		if (!error) return face->glyph->advance.x;
 #else
-		return GetGlyph(ucs, FT_LOAD_DEFAULT, face)->advance.x >> 6;
+		return GetGlyph(ucs, FT_LOAD_DEFAULT, face)->advance.x;
 #endif
 	}
 	return 0;
@@ -575,8 +589,8 @@ bool Text::GetFontName(std::string &s) {
 }
 
 void Text::InitPen(void) {
-	pen.x = margin.left;
-	pen.y = margin.top + GetHeight();
+	pen.x = (margin.left) * 64;
+	pen.y = (margin.top) * 64 + GetHeight();
 }
 
 void Text::PrintChar(u32 ucs)
@@ -592,7 +606,7 @@ void Text::PrintChar(u32 ucs, FT_Face face) {
 	// Draw a character for the given UCS codepoint,
 	// into the current screen buffer at the current pen position.
 
-	u16 bx, by, width, height = 0;
+	u16 bx, by, width, height, pitch = 0;
 	FT_Byte *buffer = NULL;
 	FT_UInt advance = 0;
 	FTC_Node anode = nullptr;
@@ -624,12 +638,13 @@ void Text::PrintChar(u32 ucs, FT_Face face) {
 		by = sbit.top;
 		height = sbit.height;
 		width = sbit.width;
-		advance = sbit.xadvance;
+		pitch = sbit.pitch;
+		advance = sbit.xadvance * 64;
 	}
 	else
 	{
 		// Consult the cache for glyph data and cache it on a miss, if space is available.
-		FT_GlyphSlot glyph = GetGlyph(ucs, FT_LOAD_RENDER|FT_LOAD_TARGET_NORMAL, face);
+		FT_GlyphSlot glyph = GetGlyph(ucs, FT_LOAD_RENDER|FT_LOAD_TARGET_LCD, face);
 
   		// extract glyph image
 		FT_Bitmap bitmap = glyph->bitmap;
@@ -637,7 +652,8 @@ void Text::PrintChar(u32 ucs, FT_Face face) {
 		by = glyph->bitmap_top;
 		width = bitmap.width;
 		height = bitmap.rows;
-		advance = glyph->advance.x >> 6;
+		pitch = bitmap.pitch;
+		advance = glyph->advance.x;
 		buffer = bitmap.buffer;
 	}
 
@@ -645,7 +661,11 @@ void Text::PrintChar(u32 ucs, FT_Face face) {
 	// Fetch a kerning vector.
 	if(codeprev) {
 		FT_Vector kerning_vector;
-		error = FT_Get_Kerning(face, codeprev, ucs, FT_KERNING_DEFAULT, &kerning_vector);
+		error = FT_Get_Kerning(face, GetGlyphIndex(codeprev), GetGlyphIndex(ucs), FT_KERNING_DEFAULT, &kerning_vector);
+		if (error) halt("error getting kerning vector");
+
+		//move pen by kerning vector
+		pen.x += kerning_vector.x;
 	}
 #endif
 
@@ -655,35 +675,40 @@ void Text::PrintChar(u32 ucs, FT_Face face) {
 	// Mark the pen position.
 	screen[pen.y*display.height+pen.x] = RGB15(0, 0, 0) | BIT(15);
 #endif
+#ifdef LCD_VERTICAL
 
+	u8 offset = (u32(pen.x) % 64) / 22; //0, 1, or 2. number of subpixels to shift by.
 	u16 gx, gy;
 	for (gy=0; gy<height; gy++)
 	{
-		for (gx=0; gx<width; gx++)
+		for (gx=0; gx<width/3; gx++)
 		{
-			u8 a = buffer[gy*width+gx];
-			if (!a) continue;
+			//supersampling rather than rgb-ing. maybe ill do both in the future
+			u8 ab = offset>0 ? 0 : buffer[gy*pitch+gx*3];
+			u8 ag = offset>1 ? 0 : buffer[gy*pitch+gx*3+1 - offset];
+			u8 ar = buffer[gy*pitch+gx*3+2 - offset];
+			if (!(ab|ag|ar)) continue;
 			//if (!invert) a = 256 - a;
 
-			u16 sx = (pen.x+gx+bx);
-			u16 sy = (pen.y+gy-by);
+			u16 sx = (pen.x/64+gx+bx);
+			u16 sy = (pen.y/64+gy-by);
 			u16 layerBottom = screen[sy*display.height+sx];
 			int r,g,b;
 			//DS seems to use BGR not RGB
 			r = 0x1F & (layerBottom >> 0);
 			g = 0x1F & (layerBottom >> 5);
 			b = 0x1F & (layerBottom >> 10);
-		
-			
+
 			if(invert) {
-				r+=(int)a>>3;
-				g+=(int)a>>3;
-				b+=(int)a>>3;
+				b+=(int)ab>>3;
+				g+=(int)ag>>3;
+				r+=(int)ar>>3;
 			}else {
-				r-=(int)a>>3;
-				g-=(int)a>>3;
-				b-=(int)a>>3;
+				b-=(int)ab>>3;
+				g-=(int)ag>>3;
+				r-=(int)ar>>3;
 			}
+
 			r = r<0 ? 0 : r;
 			g = g<0 ? 0 : g;
 			b = b<0 ? 0 : b;
@@ -699,6 +724,48 @@ void Text::PrintChar(u32 ucs, FT_Face face) {
 #endif
 			
 			screen[sy*display.height+sx] = pixel;
+
+			if (offset > 0){
+				//supersampling rather than rgb-ing. maybe ill do both in the future
+
+				ab = offset<=0 ? 0 : buffer[gy*pitch+gx*3+3 - offset];
+				ag = offset<=1 ? 0 : buffer[gy*pitch+gx*3+4 - offset];
+				ar = 0;
+
+				if (!(ab|ag|ar)) continue;
+				//if (!invert) a = 256 - a;
+
+				sx = (pen.x/64+gx+bx+1);
+				sy = (pen.y/64+gy-by);
+				layerBottom = screen[sy*display.height+sx];
+				int r,g,b;
+				//DS seems to use BGR not RGB
+				r = 0x1F & (layerBottom >> 0);
+				g = 0x1F & (layerBottom >> 5);
+				b = 0x1F & (layerBottom >> 10);
+			
+				
+				if(invert) {
+					b+=(int)ab>>3;
+					g+=(int)ag>>3;
+					r+=(int)ar>>3;
+				}else {
+					b-=(int)ab>>3;
+					g-=(int)ag>>3;
+					r-=(int)ar>>3;
+				}
+				r = r<0 ? 0 : r;
+				g = g<0 ? 0 : g;
+				b = b<0 ? 0 : b;
+				
+				r = r>31 ? 31 : r;
+				g = g>31 ? 31 : g;
+				b = b>31 ? 31 : b;
+
+				pixel = RGB15(r,g,b) | BIT(15);
+				
+				screen[sy*display.height+sx] = pixel;
+			}
 		}
 	}
 
@@ -707,18 +774,118 @@ void Text::PrintChar(u32 ucs, FT_Face face) {
 
 	if (ftc && anode)
 		FTC_Node_Unref(anode, cache.manager);
+#else
+    u8 offset = (u32(pen.y) % 64) / 22; //0, 1, or 2. number of subpixels to shift by.
+	u16 gx, gy;
+	for (gy=0; gy<height/3; gy++)
+	{
+		for (gx=0; gx<width; gx++)
+		{
+			//supersampling rather than rgb-ing. maybe ill do both in the future
+			u8 ar = offset>0 ? 0 : buffer[(gy*3)*pitch+gx];
+			u8 ag = offset>1 ? 0 : buffer[(gy*3+1 - offset)*pitch+gx];
+			u8 ab = buffer[(gy*3+2 - offset)*pitch+gx];
+			if (!(ab|ag|ar)) continue;
+			//if (!invert) a = 256 - a;
+
+			u16 sx = (pen.x/64+gx+bx);
+			u16 sy = (pen.y/64+gy-by);
+			u16 layerBottom = screen[sy*display.height+sx];
+			int r,g,b;
+			//DS seems to use BGR not RGB
+			r = 0x1F & (layerBottom >> 0);
+			g = 0x1F & (layerBottom >> 5);
+			b = 0x1F & (layerBottom >> 10);
+
+			if(invert) {
+				b+=(int)ab>>3;
+				g+=(int)ag>>3;
+				r+=(int)ar>>3;
+			}else {
+				b-=(int)ab>>3;
+				g-=(int)ag>>3;
+				r-=(int)ar>>3;
+			}
+
+			r = r<0 ? 0 : r;
+			g = g<0 ? 0 : g;
+			b = b<0 ? 0 : b;
+			
+			r = r>31 ? 31 : r;
+			g = g>31 ? 31 : g;
+			b = b>31 ? 31 : b;
+
+			u16 pixel = RGB15(r,g,b) | BIT(15);
+			
+#ifdef DRAW_CACHE_MISSES
+			// if(!hit) pixel = RGB15(a>>3,0,0) | BIT(15);
+#endif
+			
+			screen[sy*display.height+sx] = pixel;
+
+			if (offset > 0){
+				//supersampling rather than rgb-ing. maybe ill do both in the future
+
+				ar = offset<=0 ? 0 : buffer[(gy*3+3 - offset)*pitch+gx];
+				ag = offset<=1 ? 0 : buffer[(gy*3+4 - offset)*pitch+gx];
+				ab = 0;
+
+				if (!(ab|ag|ar)) continue;
+				//if (!invert) a = 256 - a;
+
+				sx = (pen.x/64+gx+bx+1);
+				sy = (pen.y/64+gy-by);
+				layerBottom = screen[sy*display.height+sx];
+				int r,g,b;
+				//DS seems to use BGR not RGB
+				r = 0x1F & (layerBottom >> 0);
+				g = 0x1F & (layerBottom >> 5);
+				b = 0x1F & (layerBottom >> 10);
+			
+				
+				if(invert) {
+					b+=(int)ab>>3;
+					g+=(int)ag>>3;
+					r+=(int)ar>>3;
+				}else {
+					b-=(int)ab>>3;
+					g-=(int)ag>>3;
+					r-=(int)ar>>3;
+				}
+				r = r<0 ? 0 : r;
+				g = g<0 ? 0 : g;
+				b = b<0 ? 0 : b;
+				
+				r = r>31 ? 31 : r;
+				g = g>31 ? 31 : g;
+				b = b>31 ? 31 : b;
+
+				pixel = RGB15(r,g,b) | BIT(15);
+				
+				screen[sy*display.height+sx] = pixel;
+			}
+		}
+	}
+
+	pen.x += advance;
+	codeprev = ucs;
+
+	if (ftc && anode)
+		FTC_Node_Unref(anode, cache.manager);    
+#endif
+
 }
 
 bool Text::PrintNewLine(void) {
 	//! Render a newline at the current position.
-	pen.x = margin.left;
+	pen.x = (margin.left) * 64;
 	int height = GetHeight();
 	int y = pen.y + height * linespacing;
-	if (y > (display.height - margin.bottom)) {
+	if (y > 64 * (display.height - margin.bottom)) {
 		if (screen == screenleft)
 		{
 			screen = screenright;
-			pen.y = margin.top + height;
+			pen.y = 64 * margin.top + height;
 			return true;
 		}
 		else

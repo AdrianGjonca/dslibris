@@ -91,7 +91,7 @@ void Page::Draw(Text *ts)
 			i++;
 			
 			if (ts->GetPenY() + ts->GetHeight() * ts->linespacing
-				> ts->display.height - ts->margin.bottom)
+				> u32(ts->display.height - ts->margin.bottom) * 64)
 			{
 				// Move to right page
 				if(ts->GetScreen() == ts->screenleft) {
@@ -195,12 +195,13 @@ void Page::DrawNumber(Text *ts)
 	int region = ts->display.width - ts->margin.left - ts->margin.right - stringwidth;
 	int location;
 	if(pagecount == 1)
-		location = (ts->display.width/2) - (stringwidth/2);
-	else
+		location = (ts->display.width/2) * 64 - (stringwidth/2);
+	else{
 		location = ts->margin.left
 			+ (int)((float)region * (float)pagecurrent / (float)(pagecount-1));
-
+		location *= 64;
+	}
 	ts->SetScreen(ts->screenright);
-	ts->SetPen((u8)location,250);
+	ts->SetPen((u8)location,250 * 64);
 	ts->PrintString(msg);
 }
